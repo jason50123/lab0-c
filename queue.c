@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <math.h>
 #include "queue.h"
 
 /* Notice: sometimes, Cppcheck would find the potential NULL pointer bugs,
@@ -37,28 +38,54 @@ void q_free(struct list_head *l)
 /* Insert an element at head of queue */
 bool q_insert_head(struct list_head *head, char *s)
 {
-    if (!head)
+    if (!head || !s)  // 检查 head 和 s 是否为 NULL
         return false;
+
     element_t *node = (element_t *) malloc(sizeof(element_t));
     if (!node)
         return false;
-    node->value = strndup(s, strlen(s));
+
+    node->value = (char *) malloc(strlen(s) + 1);
+    if (!node->value) {
+        free(node);
+        return false;
+    }
+
+
+    strncpy(node->value, s, strlen(s));
+    node->value[strlen(s)] = '\0';
+
     list_add(&node->list, head);
+
     return true;
 }
+
 
 /* Insert an element at tail of queue */
 bool q_insert_tail(struct list_head *head, char *s)
 {
-    if (!head)
+    if (!head || !s)  // 检查 head 和 s 是否为 NULL
         return false;
+
     element_t *node = (element_t *) malloc(sizeof(element_t));
     if (!node)
         return false;
-    node->value = strndup(s, strlen(s));
+
+    node->value = (char *) malloc(strlen(s) + 1);
+    if (!node->value) {
+        free(node);
+        return false;
+    }
+
+
+    strncpy(node->value, s, strlen(s));
+    node->value[strlen(s)] = '\0';
+
     list_add_tail(&node->list, head);
+
     return true;
 }
+
 
 /* Remove an element from head of queue */
 element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
@@ -75,7 +102,15 @@ element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 /* Return number of elements in queue */
 int q_size(struct list_head *head)
 {
-    return -1;
+    if (!head)
+        return 0;
+
+    int len = 0;
+    struct list_head *li;
+
+    list_for_each (li, head)
+        len++;
+    return len;
 }
 
 /* Delete the middle node in queue */
