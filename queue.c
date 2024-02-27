@@ -44,7 +44,7 @@ bool q_insert_head(struct list_head *head, char *s)
     element_t *node = (element_t *) malloc(sizeof(element_t));
     if (!node)
         return false;
-
+    INIT_LIST_HEAD(&node->list);
     node->value = (char *) malloc(strlen(s) + 1);
     if (!node->value) {
         free(node);
@@ -69,7 +69,7 @@ bool q_insert_tail(struct list_head *head, char *s)
     element_t *node = (element_t *) malloc(sizeof(element_t));
     if (!node)
         return false;
-
+    INIT_LIST_HEAD(&node->list);
     node->value = (char *) malloc(strlen(s) + 1);
     if (!node->value) {
         free(node);
@@ -88,14 +88,21 @@ bool q_insert_tail(struct list_head *head, char *s)
 /* Remove an element from head of queue */
 element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 {
-    if (list_empty(head) || list_is_singular(head))
-        return NULL;
-    element_t *tmp = list_first_entry(head, element_t, list);
-    if (!tmp)
+    if (!head || list_empty(head))
         return NULL;
 
-    strncpy(sp, tmp->value, bufsize - 1);
-    sp[bufsize - 1] = '\0';
+    element_t *tmp = list_first_entry(head, element_t, list);
+
+    if (sp) {
+        size_t copy_size;
+        if (strlen(tmp->value) < (bufsize)) {
+            copy_size = strlen(tmp->value);
+        } else {
+            copy_size = bufsize - 1;
+        }
+        strncpy(sp, tmp->value, copy_size);
+        sp[copy_size] = '\0';
+    }
 
     list_del(&tmp->list);
 
@@ -105,14 +112,21 @@ element_t *q_remove_head(struct list_head *head, char *sp, size_t bufsize)
 /* Remove an element from tail of queue */
 element_t *q_remove_tail(struct list_head *head, char *sp, size_t bufsize)
 {
-    if (list_empty(head) || list_is_singular(head))
-        return NULL;
-    element_t *tmp = list_last_entry(head, element_t, list);
-    if (!tmp)
+    if (!head || list_empty(head))
         return NULL;
 
-    strncpy(sp, tmp->value, bufsize - 1);
-    sp[bufsize - 1] = '\0';
+    element_t *tmp = list_last_entry(head, element_t, list);
+
+    if (sp) {
+        size_t copy_size;
+        if (strlen(tmp->value) < (bufsize)) {
+            copy_size = strlen(tmp->value);
+        } else {
+            copy_size = bufsize - 1;
+        }
+        strncpy(sp, tmp->value, copy_size);
+        sp[copy_size] = '\0';
+    }
 
     list_del(&tmp->list);
 
