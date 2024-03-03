@@ -229,6 +229,24 @@ void q_reverse(struct list_head *head)
 void q_reverseK(struct list_head *head, int k)
 {
     // https://leetcode.com/problems/reverse-nodes-in-k-group/
+    if (!head || list_empty(head))
+        return;
+    struct list_head *first, *second;
+    int groups = q_size(head) / k;
+    int count = 0;
+    list_for_each_safe (first, second, head) {
+        struct list_head *tmp;
+        tmp = first;
+        if (count < groups) {
+            for (int i = 0; i < k; i++) {
+                list_move(second, tmp);
+                tmp = second;
+                second = first->next;
+            }
+            first = first->next;
+        }
+        count++;
+    }
 }
 
 int merge_two_queues(struct list_head *q1, struct list_head *q2, bool descend)
