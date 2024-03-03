@@ -231,8 +231,71 @@ void q_reverseK(struct list_head *head, int k)
     // https://leetcode.com/problems/reverse-nodes-in-k-group/
 }
 
+int merge_two_queues(struct list_head *q1, struct list_head *q2, bool descend)
+{
+    element_t *entry, *safe;
+    struct list_head *q1_head, *q2_head;
+    q1_head = q1;
+    q2_head = q2;
+    int count = q_size(q1) + q_size(q2);
+    if (list_empty(q2)) {
+        return count;
+    }
+    q2 = q2->next;
+    list_for_each_entry_safe (entry, safe, q1, list) {
+        if (descend) {
+            while (strcmp(entry->value,
+                          list_entry(q2, element_t, list)->value) < 0) {
+                if (q2->next == q2_head) {
+                    q2 = q2->next;
+                    list_move(q2->prev, entry->list.prev);
+                    goto out;
+                } else {
+                    q2 = q2->next;
+                    list_move(q2->prev, entry->list.prev);
+                }
+            }
+        } else {
+            while (strcmp(entry->value,
+                          list_entry(q2, element_t, list)->value) > 0) {
+                if (q2->next == q2_head) {
+                    q2 = q2->next;
+                    list_move(q2->prev, entry->list.prev);
+                    goto out;
+                } else {
+                    q2 = q2->next;
+                    list_move(q2->prev, entry->list.prev);
+                }
+            }
+        }
+    }
+out:
+    list_splice_tail_init(q2_head, q1_head);
+    return count;
+}
+
 /* Sort elements of queue in ascending/descending order */
-void q_sort(struct list_head *head, bool descend) {}
+void q_sort(struct list_head *head, bool descend)
+{
+    if (!head || list_empty(head) || list_is_singular(head)) {
+        return;
+    }
+    // find mid list
+    struct list_head *slow, *fast;
+    slow = fast = head->next;
+    while (fast->next != head && fast->next->next != head) {
+        slow = slow->next;
+        fast = fast->next->next;
+    }
+
+    struct list_head q2;
+    list_cut_position(&q2, head, slow);
+    q_sort(head, descend);
+    q_sort(&q2, descend);
+    merge_two_queues(head, &q2, descend);
+}
+
+
 
 /* Remove every node which has a node with a strictly less value anywhere to
  * the right side of it */
@@ -301,5 +364,20 @@ int q_descend(struct list_head *head)
 int q_merge(struct list_head *head, bool descend)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
-    return 0;
+    if (!head || list_empty(head)) {
+        return 0;
+    }
+    if (list_is_singular(head)) {
+        return q_size(list_first_entry(head, queue_contex_t, chain)->q);
+    }
+    queue_contex_t *first = list_entry(head->next, queue_contex_t, chain);
+    struct list_head *entry, *safe;
+    int count = 0;
+    list_for_each_safe (entry, safe, head) {
+        if (safe != head) {
+            queue_contex_t *comp = list_entry(safe, queue_contex_t, chain);
+            count = merge_two_queues(first->q, comp->q, descend);
+        }
+    }
+    return count;
 }
