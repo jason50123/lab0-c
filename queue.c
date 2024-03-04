@@ -234,16 +234,14 @@ void q_reverseK(struct list_head *head, int k)
     struct list_head *first, *second;
     int groups = q_size(head) / k;
     int count = 0;
-    list_for_each_safe (first, second, head) {
+    list_for_each (first, head) {
         struct list_head *tmp;
-        tmp = first;
+        tmp = first->prev;
         if (count < groups) {
-            for (int i = 0; i < k; i++) {
-                list_move(second, tmp);
-                tmp = second;
+            for (int i = 1; i < k; i++) {
                 second = first->next;
+                list_move(second, tmp);
             }
-            first = first->next;
         }
         count++;
     }
@@ -320,26 +318,22 @@ void q_sort(struct list_head *head, bool descend)
 int q_ascend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    if (!head || list_empty(head))
+    if (!head || list_empty(head)) {
         return 0;
-    q_reverse(head);
-
-    struct list_head *traverse = head->next;
-    while (traverse != head) {
-        struct list_head *tmp = traverse;
-        element_t *tmpele = list_entry(traverse, element_t, list);
+    }
+    struct list_head *traverse, *tmp;
+    traverse = head->prev;
+    while (traverse->prev != head) {
         if (strcmp(list_entry(traverse, element_t, list)->value,
-                   list_entry(traverse->next, element_t, list)->value) > 0) {
-            tmp = traverse->next;
-            list_del(traverse);
+                   list_entry(traverse->prev, element_t, list)->value) < 0) {
+            tmp = traverse->prev;
+            element_t *tmpele = list_entry(tmp, element_t, list);
+            list_del(tmp);
             q_release_element(tmpele);
-            traverse = tmp;
         } else {
-            traverse = traverse->next;
+            traverse = traverse->prev;
         }
     }
-    q_reverse(head);
-
     return q_size(head);
 }
 
@@ -348,26 +342,22 @@ int q_ascend(struct list_head *head)
 int q_descend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    if (!head || list_empty(head))
+    if (!head || list_empty(head)) {
         return 0;
-    q_reverse(head);
-
-    struct list_head *traverse = head->next;
-    while (traverse != head) {
-        struct list_head *tmp = traverse;
-        element_t *tmpele = list_entry(traverse, element_t, list);
+    }
+    struct list_head *traverse, *tmp;
+    traverse = head->prev;
+    while (traverse->prev != head) {
         if (strcmp(list_entry(traverse, element_t, list)->value,
-                   list_entry(traverse->next, element_t, list)->value) < 0) {
-            tmp = traverse->next;
-            list_del(traverse);
+                   list_entry(traverse->prev, element_t, list)->value) > 0) {
+            tmp = traverse->prev;
+            element_t *tmpele = list_entry(tmp, element_t, list);
+            list_del(tmp);
             q_release_element(tmpele);
-            traverse = tmp;
         } else {
-            traverse = traverse->next;
+            traverse = traverse->prev;
         }
     }
-    q_reverse(head);
-
     return q_size(head);
 }
 
