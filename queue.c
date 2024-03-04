@@ -323,25 +323,22 @@ int q_ascend(struct list_head *head)
     if (!head || list_empty(head))
         return 0;
     q_reverse(head);
-    element_t *node = list_entry(head->next, element_t, list);
-    int value = atoi(node->value);
-    struct list_head *traverse = head->next->next;
+
+    struct list_head *traverse = head->next;
     while (traverse != head) {
         struct list_head *tmp = traverse;
         element_t *tmpele = list_entry(traverse, element_t, list);
-        int tmpval = atoi(tmpele->value);
-        if (value <= tmpval) {
-            value = tmpval;
-            traverse = traverse->next;
-        } else {
+        if (strcmp(list_entry(traverse, element_t, list)->value,
+                   list_entry(traverse->next, element_t, list)->value) > 0) {
             tmp = traverse->next;
             list_del(traverse);
             q_release_element(tmpele);
             traverse = tmp;
+        } else {
+            traverse = traverse->next;
         }
     }
     q_reverse(head);
-
 
     return q_size(head);
 }
@@ -354,28 +351,26 @@ int q_descend(struct list_head *head)
     if (!head || list_empty(head))
         return 0;
     q_reverse(head);
-    element_t *node = list_entry(head->next, element_t, list);
-    int value = atoi(node->value);
-    struct list_head *traverse = head->next->next;
+
+    struct list_head *traverse = head->next;
     while (traverse != head) {
         struct list_head *tmp = traverse;
         element_t *tmpele = list_entry(traverse, element_t, list);
-        int tmpval = atoi(tmpele->value);
-        if (value <= tmpval) {
-            value = tmpval;
-            traverse = traverse->next;
-        } else {
+        if (strcmp(list_entry(traverse, element_t, list)->value,
+                   list_entry(traverse->next, element_t, list)->value) < 0) {
             tmp = traverse->next;
             list_del(traverse);
             q_release_element(tmpele);
             traverse = tmp;
+        } else {
+            traverse = traverse->next;
         }
     }
     q_reverse(head);
 
-
     return q_size(head);
 }
+
 
 /* Merge all the queues into one sorted queue, which is in ascending/descending
  * order */
