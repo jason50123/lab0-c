@@ -391,8 +391,8 @@ static bool do_time(int argc, char *argv[])
     return ok;
 }
 
-static bool use_linenoise = true;
-static int web_fd;
+bool use_linenoise = true;
+int web_fd = -1;
 
 static bool do_web(int argc, char *argv[])
 {
@@ -403,9 +403,12 @@ static bool do_web(int argc, char *argv[])
     }
 
     web_fd = web_open(port);
+    int flags = fcntl(web_fd, F_GETFL);
+    fcntl(web_fd, F_SETFL, flags | O_NONBLOCK);
+
     if (web_fd > 0) {
         printf("listen on port %d, fd is %d\n", port, web_fd);
-        use_linenoise = false;
+        // use_linenoise = false;
     } else {
         perror("ERROR");
         exit(web_fd);
@@ -620,6 +623,7 @@ static int cmd_select(int nfds,
         char *buffer = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n";
         web_send(web_connfd, buffer);
 
+
         if (p)
             interpret_cmd(p);
         free(p);
@@ -680,6 +684,8 @@ void completion(const char *buf, line_completions_t *lc)
 
 bool run_console(char *infile_name)
 {
+    // struct sockaddr_in clientaddr;
+    // socklen_t clientlen = sizeof (clientaddr);
     if (!push_file(infile_name)) {
         report(1, "ERROR: Could not open source file '%s'", infile_name);
         return false;
@@ -687,18 +693,16 @@ bool run_console(char *infile_name)
 
     if (!has_infile) {
         char *cmdline;
-        while (use_linenoise && (cmdline = linenoise(prompt))) {
+        while (use_linenoise && (cmdline = linenoise(prompt)) != NULL) {
             interpret_cmd(cmdline);
             line_history_add(cmdline);       /* Add to the history. */
             line_history_save(HISTORY_FILE); /* Save the history on disk. */
             line_free(cmdline);
-            while (buf_stack && buf_stack->fd != STDIN_FILENO)
-                cmd_select(0, NULL, NULL, NULL, NULL);
-            has_infile = false;
-        }
-        if (!use_linenoise) {
-            while (!cmd_done())
-                cmd_select(0, NULL, NULL, NULL, NULL);
+            if (!use_linenoise) {
+                while (!cmd_done()) {
+                    cmd_select(0, NULL, NULL, NULL, NULL);
+                }
+            }
         }
     } else {
         while (!cmd_done())

@@ -103,19 +103,21 @@
  *
  */
 
+#include "linenoise.h"
 #include <ctype.h>
 #include <errno.h>
+#include <netinet/in.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <termios.h>
 #include <unistd.h>
-
-#include "linenoise.h"
+#include <web.h>
 
 #define LINENOISE_DEFAULT_HISTORY_MAX_LEN 100
 #define LINENOISE_MAX_LINE 4096
@@ -883,7 +885,7 @@ static void line_edit_next_word(struct line_state *l)
 
     refresh_line(l);
 }
-
+extern int web_fd;
 /* This function is the core of the line editing capability of linenoise.
  * It expects 'fd' to be already in "raw mode" so that every key pressed
  * will be returned ASAP to read().
@@ -929,12 +931,59 @@ static int line_edit(int stdin_fd,
         return -1;
     while (1) {
         signed char c;
-        int nread;
+
         char seq[5];
 
-        nread = read(l.ifd, &c, 1);
-        if (nread <= 0)
-            return l.len;
+        fd_set set;
+
+        FD_ZERO(&set);
+        int flag = 0;
+        if (web_fd != -1) {
+            flag = 1;
+            FD_SET(web_fd, &set);
+        }
+
+        FD_SET(stdin_fd, &set);
+        int rv;
+        if (flag) {
+            rv = select(web_fd + 1, &set, NULL, NULL, NULL);
+        } else {
+            rv = select(stdin_fd + 1, &set, NULL, NULL, NULL);
+        }
+
+        struct sockaddr_in clientaddr;
+        socklen_t clientlen = sizeof(clientaddr);
+
+
+        switch (rv) {
+        case -1:
+            perror("select"); /* an error occurred */
+            continue;
+        case 0:
+            printf("timeout occurred\n"); /* a timeout occurred */
+            continue;
+        default:
+            if ((web_fd != -1) && FD_ISSET(web_fd, &set)) {
+                int connfd;
+                connfd =
+                    accept(web_fd, (struct sockaddr *) &clientaddr, &clientlen);
+                char *p = web_recv(connfd, &clientaddr);
+                char *buffer =
+                    "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n";
+                web_send(connfd, buffer);
+                strncpy(buf, p, strlen(p) + 1);
+                close(connfd);
+                free(p);
+                return strlen(p);
+            } else if (FD_ISSET(stdin_fd, &set)) {
+                int nread;
+                nread = read(l.ifd, &c, 1);
+                if (nread <= 0)
+                    return l.len;
+            }
+            break;
+        }
+
 
         /* Only autocomplete when the callback is set. It returns < 0 when
          * there was an error reading from fd. Otherwise it will return the
