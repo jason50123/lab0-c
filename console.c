@@ -191,6 +191,7 @@ static bool interpret_cmda(int argc, char *argv[])
 }
 
 /* Execute a command from a command line */
+int web_connfd;
 static bool interpret_cmd(char *cmdline)
 {
     if (quit_flag)
@@ -202,7 +203,8 @@ static bool interpret_cmd(char *cmdline)
     for (int i = 0; i < argc; i++)
         free_string(argv[i]);
     free_array(argv, argc, sizeof(char *));
-
+    if (web_connfd)
+        close(web_connfd);
     return ok;
 }
 

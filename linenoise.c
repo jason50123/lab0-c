@@ -895,6 +895,7 @@ extern int web_fd;
  *
  * The function returns the length of the current buffer.
  */
+extern int web_connfd;
 static int line_edit(int stdin_fd,
                      int stdout_fd,
                      char *buf,
@@ -971,8 +972,7 @@ static int line_edit(int stdin_fd,
                 char *buffer =
                     "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n";
                 web_send(connfd, buffer);
-                strncpy(buf, p, strlen(p) + 1);
-                close(connfd);
+                web_connfd = connfd;
                 free(p);
                 return strlen(p);
             } else if (FD_ISSET(stdin_fd, &set)) {
