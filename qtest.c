@@ -5,6 +5,7 @@
 #include <getopt.h>
 #include <signal.h>
 #include <spawn.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -78,6 +79,7 @@ static int descend = 0;
 #define MIN_RANDSTR_LEN 5
 #define MAX_RANDSTR_LEN 10
 static const char charset[] = "abcdefghijklmnopqrstuvwxyz";
+uint32_t seed = 12585;
 /* For queue_insert and queue_remove */
 typedef enum {
     POS_TAIL,
@@ -178,6 +180,37 @@ static void fill_rand_string(char *buf, size_t buf_size)
     buf[len] = '\0';
 }
 
+
+uint32_t xorshift32(uint32_t *state)
+{
+    uint32_t x = *state;
+    x ^= x << 13;
+    x ^= x >> 17;
+    x ^= x << 5;
+    *state = x;
+    return x;
+}
+
+void generate_random_buffer(uint32_t seed, char *buffer, size_t n)
+{
+    uint32_t state = rand();
+    for (size_t i = 0; i < n; ++i) {
+        buffer[i] = xorshift32(&state) & 0xFF;
+    }
+}
+
+static void fill_xor_string(char *buf, size_t buf_size)
+{
+    size_t len = 0;
+    while (len < MIN_RANDSTR_LEN)
+        len = rand() % buf_size;
+    generate_random_buffer(seed, buf, len);
+    for (size_t n = 0; n < len; n++)
+        buf[n] = charset[buf[n] % (sizeof(charset) - 1)];
+    buf[len] = '\0';
+}
+
+
 /* insertion */
 static bool queue_insert(position_t pos, int argc, char *argv[])
 {
@@ -200,7 +233,7 @@ static bool queue_insert(position_t pos, int argc, char *argv[])
     char *lasts = NULL;
     char randstr_buf[MAX_RANDSTR_LEN];
     int reps = 1;
-    bool ok = true, need_rand = false;
+    bool ok = true, need_rand = false, need_xor = false;
     if (argc != 2 && argc != 3) {
         report(1, "%s needs 1-2 arguments", argv[0]);
         return false;
@@ -219,6 +252,11 @@ static bool queue_insert(position_t pos, int argc, char *argv[])
         inserts = randstr_buf;
     }
 
+    if (!strcmp(inserts, "XORS")) {
+        need_xor = true;
+        inserts = randstr_buf;
+    }
+
     if (!current || !current->q)
         report(3, "Warning: Calling insert %s on null queue",
                pos == POS_TAIL ? "tail" : "head");
@@ -228,6 +266,8 @@ static bool queue_insert(position_t pos, int argc, char *argv[])
         for (int r = 0; ok && r < reps; r++) {
             if (need_rand)
                 fill_rand_string(randstr_buf, sizeof(randstr_buf));
+            if (need_xor)
+                fill_xor_string(randstr_buf, sizeof(randstr_buf));
             bool rval = pos == POS_TAIL ? q_insert_tail(current->q, inserts)
                                         : q_insert_head(current->q, inserts);
             if (rval) {
