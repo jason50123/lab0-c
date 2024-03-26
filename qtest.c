@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "mt19937-64.c"
 
 #if defined(__APPLE__)
 #include <mach/mach_time.h>
@@ -78,8 +79,13 @@ static int descend = 0;
 
 #define MIN_RANDSTR_LEN 5
 #define MAX_RANDSTR_LEN 10
-static const char charset[] = "abcdefghijklmnopqrstuvwxyz";
-uint32_t seed = 12585;
+#define BUFFER_SIZE 1000000000
+char global_buffer[BUFFER_SIZE] = "";
+
+
+static const char charset[] =
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
+uint32_t xorseed = 12585;
 /* For queue_insert and queue_remove */
 typedef enum {
     POS_TAIL,
@@ -178,24 +184,24 @@ static void fill_rand_string(char *buf, size_t buf_size)
     for (size_t n = 0; n < len; n++)
         buf[n] = charset[buf[n] % (sizeof(charset) - 1)];
     buf[len] = '\0';
+    strncat(global_buffer, buf, BUFFER_SIZE - strlen(global_buffer) - 1);
 }
 
 
-uint32_t xorshift32(uint32_t *state)
-{
-    uint32_t x = *state;
-    x ^= x << 13;
-    x ^= x >> 17;
-    x ^= x << 5;
-    *state = x;
-    return x;
-}
+// uint32_t xorshift32(uint32_t *state)
+// {
+//     uint32_t x = *state;
+//     x ^= x << 13;
+//     x ^= x >> 17;
+//     x ^= x << 5;
+//     *state = x;
+//     return x;
+// }
 
-void generate_random_buffer(uint32_t seed, char *buffer, size_t n)
+void generate_random_buffer(uint32_t xorseed, char *buffer, size_t n)
 {
-    uint32_t state = rand();
     for (size_t i = 0; i < n; ++i) {
-        buffer[i] = xorshift32(&state) & 0xFF;
+        buffer[i] = mt19937_rand() & 0xFF;
     }
 }
 
@@ -204,10 +210,14 @@ static void fill_xor_string(char *buf, size_t buf_size)
     size_t len = 0;
     while (len < MIN_RANDSTR_LEN)
         len = rand() % buf_size;
-    generate_random_buffer(seed, buf, len);
+    mt19937_init(xorseed);
+    // for (size_t i = 0; i < len; ++i) {
+    //     buf[i] = mt19937_rand();
+    // }
     for (size_t n = 0; n < len; n++)
         buf[n] = charset[buf[n] % (sizeof(charset) - 1)];
     buf[len] = '\0';
+    strncat(global_buffer, buf, BUFFER_SIZE - strlen(global_buffer) - 1);
 }
 
 
@@ -311,6 +321,15 @@ static bool queue_insert(position_t pos, int argc, char *argv[])
     exception_cancel();
 
     q_show(3);
+
+    FILE *file = fopen("random_data.bin", "w");
+    if (file == NULL) {
+        perror("Failed to open file");
+        return 1;
+    }
+    fputs(global_buffer, file);
+    fclose(file);
+
     return ok;
 }
 
