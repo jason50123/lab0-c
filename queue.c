@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include <math.h>
+#include "./list_sort.h"
 #include "queue.h"
 
 /* Notice: sometimes, Cppcheck would find the potential NULL pointer bugs,
