@@ -41,7 +41,12 @@ OBJS := qtest.o report.o console.o harness.o queue.o \
         random.o dudect/constant.o dudect/fixture.o dudect/ttest.o \
         shannon_entropy.o \
         linenoise.o web.o \
-		list_sort.o
+		list_sort.o \
+		game.o \
+		zobrist.o \
+		agents/negamax.o \
+		ttt.o \
+		agents/mcts.o  
 
 deps := $(OBJS:%.o=.%.o.d)
 
@@ -51,6 +56,7 @@ qtest: $(OBJS)
 
 %.o: %.c
 	@mkdir -p .$(DUT_DIR)
+	@mkdir -p .agents
 	$(VECHO) "  CC\t$@\n"
 	$(Q)$(CC) -o $@ $(CFLAGS) -c -MMD -MF .$@.d $<
 

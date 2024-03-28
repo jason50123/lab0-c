@@ -1149,6 +1149,12 @@ static bool do_next(int argc, char *argv[])
 
     return q_show(0);
 }
+extern void ttt();
+static bool do_ttt(int argc, char *argv[])
+{
+    ttt();
+    return true;
+}
 
 static void console_init()
 {
@@ -1192,6 +1198,7 @@ static void console_init()
                 "[K]");
     ADD_COMMAND(shuffle, "Do Fisher-Yates shuffle", "");
     ADD_COMMAND(lsort, "Do list_sort", "");
+    ADD_COMMAND(ttt, "tic-tac-toe", "");
     add_param("length", &string_length, "Maximum length of displayed string",
               NULL);
     add_param("malloc", &fail_probability, "Malloc failure probability percent",
